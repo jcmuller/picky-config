@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"sort"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -14,17 +15,17 @@ import (
 )
 
 var (
-	profilesMap = map[string]string{
-		//"Personal": "Profile 3",
-		"GH":      "Profile 4",
-		"SHED":    "Profile 2",
-		"Zendesk": "Profile 1",
-		"Twitter": "Profile 5",
-	}
 	configFilePath = fmt.Sprintf("%s/.config/picky/config.yaml", os.Getenv("HOME"))
 )
 
+type defaultProfile struct {
+	Base    string `yaml:"base"`
+	Profile string `yaml:"profile"`
+	Args    string `yaml:"args"`
+}
+
 type rule struct {
+	Label   string   `yaml:"label"`
 	Base    string   `yaml:"base"`
 	Profile string   `yaml:"profile"`
 	Args    string   `yaml:"args"`
@@ -32,7 +33,9 @@ type rule struct {
 }
 
 type config struct {
-	Rules []*rule `yaml:"rules"`
+	Debug          bool            `yaml:"debug"`
+	DefaultProfile *defaultProfile `yaml:"default"`
+	Rules          []*rule         `yaml:"rules"`
 }
 
 func fileContents(path string) (configFile []byte, err error) {
@@ -45,17 +48,25 @@ func fileContents(path string) (configFile []byte, err error) {
 	return
 }
 
-func getProfile() (profile string, err error) {
-	profileNames := make([]string, 0, len(profilesMap))
-	for name := range profilesMap {
-		profileNames = append(profileNames, name)
+func getProfile(c *config) (profile string, err error) {
+	profileNames := []string{}
+	for _, rule := range c.Rules {
+		profileNames = append(profileNames, rule.Label)
 	}
 
-	profileName, err := dmenu.Popup("Choose profile: ", profileNames...)
-	profile = profilesMap[profileName]
+	sort.Strings(profileNames)
+
+	profileNames = append(profileNames, "Add new profile")
+
+	profile, err = dmenu.Popup("Choose profile: ", profileNames...)
 
 	if err != nil {
-		panic(err)
+		if err, ok := err.(*dmenu.EmptySelectionError); !ok {
+			panic(err)
+		} else {
+			fmt.Println("No profile selected")
+			os.Exit(0)
+		}
 	}
 
 	return
@@ -105,19 +116,32 @@ func confirm(uri string) {
 	}
 
 	if err != nil {
-		panic(err)
+		if err, ok := err.(*dmenu.EmptySelectionError); !ok {
+			panic(err)
+		} else {
+			fmt.Println("Assuming no.")
+			os.Exit(0)
+		}
 	}
 }
 
-func getRule(c *config, profile string) (rule *rule) {
+func getRule(c *config, profile string) (rr *rule) {
 	for _, r := range c.Rules {
-		if r.Args == profile {
-			rule = r
+		if r.Label == profile {
+			rr = r
 			return
 		}
 	}
 
-	return nil
+	rr = &rule{
+		Label:   profile,
+		Base:    c.DefaultProfile.Base,
+		Profile: c.DefaultProfile.Profile,
+		Args:    "CHANGE ME",
+	}
+	c.Rules = append(c.Rules, rr)
+
+	return
 }
 
 func saveFile(c *config) {
@@ -144,7 +168,7 @@ func main() {
 	config := readConfig()
 	uri := getURL()
 	confirm(uri)
-	profile, _ := getProfile()
+	profile, _ := getProfile(config)
 	rule := getRule(config, profile)
 
 	rule.URIs = append(rule.URIs, uri)
