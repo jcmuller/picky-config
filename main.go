@@ -134,7 +134,7 @@ func getRule(c *config, profile string) (rr *rule) {
 	}
 
 	rr = &rule{
-		Label:   profile,
+		Label:   "New profile",
 		Base:    c.DefaultProfile.Base,
 		Profile: c.DefaultProfile.Profile,
 		Args:    "CHANGE ME",
