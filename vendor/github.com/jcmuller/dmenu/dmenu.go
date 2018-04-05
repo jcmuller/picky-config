@@ -13,8 +13,8 @@ import (
 
 // Dmenu holds the structure of this thing
 type Dmenu struct {
-	command        string
-	optionTemplate string
+	command   string
+	arguments []string
 }
 
 // EmptySelectionError is returned if there is no selection
@@ -33,23 +33,82 @@ func Popup(prompt string, options ...string) (selection string, err error) {
 }
 
 func defaultDmenu() *Dmenu {
-	return New("dmenu", "-p %s")
+	return New("dmenu", "-p", "%s")
 }
 
 // New instance of dmenu
-func New(command, optionTemplate string) *Dmenu {
+func New(command string, arguments ...string) *Dmenu {
 	program, err := exec.LookPath(command)
 
 	if err != nil {
 		log.Fatalf("%s not found", command)
 	}
 
-	return &Dmenu{program, optionTemplate}
+	return &Dmenu{program, arguments}
+}
+
+// NewZenityList constructs a dmenu for zenity
+func NewZenityList() *Dmenu {
+	return New("zenity", "--title=%s", `--list`, `--column`, `%s`)
+}
+
+// NewZenityYesNo constructs a dmenu for zenity yes/no questions
+func NewZenityYesNo() *Dmenu {
+	return New("zenity", `--title`, `%s`, `--question`, `--text`, `%s`)
+}
+
+// YesNo returns true of false
+func (d *Dmenu) YesNo(prompt string) (bool, error) {
+	processedArgs := []string{}
+	for _, arg := range d.arguments {
+		var parg string
+		if strings.Contains(arg, "%s") {
+			parg = fmt.Sprintf(arg, prompt)
+		} else {
+			parg = arg
+		}
+
+		processedArgs = append(processedArgs, parg)
+	}
+	cmd := exec.Command(d.command, processedArgs...)
+
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("cmd.Start: %v\n", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				if status.ExitStatus() == 1 {
+					return false, nil
+				} else {
+					return false, err
+				}
+			} else {
+				return false, err
+			}
+		} else {
+			return false, err
+		}
+	}
+
+	return true, nil
 }
 
 // Popup pops up the menu
 func (d *Dmenu) Popup(prompt string, options ...string) (selection string, err error) {
-	cmd := exec.Command(d.command, strings.Split(fmt.Sprintf(d.optionTemplate, prompt), " ")...)
+	processedArgs := []string{}
+	for _, arg := range d.arguments {
+		var parg string
+		if strings.Contains(arg, "%s") {
+			parg = fmt.Sprintf(arg, prompt)
+		} else {
+			parg = arg
+		}
+
+		processedArgs = append(processedArgs, parg)
+	}
+	cmd := exec.Command(d.command, processedArgs...)
 
 	stdin, err := cmd.StdinPipe()
 
@@ -62,7 +121,7 @@ func (d *Dmenu) Popup(prompt string, options ...string) (selection string, err e
 		io.WriteString(stdin, strings.Join(options, "\n"))
 	}(stdin)
 
-	byteOut, err := cmd.CombinedOutput()
+	byteOut, err := cmd.Output()
 
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {

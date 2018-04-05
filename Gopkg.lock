@@ -11,7 +11,7 @@
   branch = "master"
   name = "github.com/jcmuller/dmenu"
   packages = ["."]
-  revision = "c0a364c94ff5f32fa2822f04069958d1916709d0"
+  revision = "6a4e62f878f6df3f6efab0ad7a9c79df6953f5f0"
 
 [[projects]]
   name = "gopkg.in/yaml.v2"

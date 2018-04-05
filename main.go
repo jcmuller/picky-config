@@ -58,7 +58,7 @@ func getProfile(c *config) (profile string, err error) {
 
 	profileNames = append(profileNames, "Add new profile")
 
-	profile, err = dmenu.Popup("Choose profile: ", profileNames...)
+	profile, err = dmenu.NewZenityList().Popup("Choose profile: ", profileNames...)
 
 	if err != nil {
 		if err, ok := err.(*dmenu.EmptySelectionError); !ok {
@@ -107,10 +107,9 @@ func getURL() (uri string) {
 }
 
 func confirm(uri string) {
-	yesNo := []string{"yes", "no"}
-	answer, err := dmenu.Popup(fmt.Sprintf(`Add_%s_to_config?`, uri), yesNo...)
+	answer, err := dmenu.NewZenityYesNo().YesNo(fmt.Sprintf(`Add %s to config?`, uri))
 
-	if answer == "no" {
+	if !answer {
 		fmt.Println("Not adding url")
 		os.Exit(0)
 	}
@@ -152,6 +151,7 @@ func saveFile(c *config) {
 	}
 
 	f, err := os.OpenFile(configFilePath, os.O_CREATE|os.O_WRONLY, 0644)
+	defer f.Close()
 
 	if err != nil {
 		panic(err)
