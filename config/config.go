@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"sort"
 
-	"github.com/jcmuller/dmenu"
+	"github.com/jcmuller/gozenity"
 	"github.com/jcmuller/picky/rule"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -57,10 +57,10 @@ func (pc *pickyConfig) getProfile() {
 
 	profileNames = append(profileNames, "Add new profile")
 
-	profile, err := dmenu.NewZenityList().Popup("Choose profile: ", profileNames...)
+	profile, err := gozenity.List("Choose profile: ", profileNames...)
 
 	if err != nil {
-		if err, ok := err.(*dmenu.EmptySelectionError); !ok {
+		if err, ok := err.(*gozenity.EmptySelectionError); !ok {
 			panic(err)
 		} else {
 			fmt.Println("No profile selected")
@@ -89,7 +89,7 @@ func GetConfig() (c *config) {
 }
 
 func (pc *pickyConfig) confirm() bool {
-	answer, err := dmenu.NewZenityYesNo().YesNo(fmt.Sprintf(`Add %s to config?`, pc.uri))
+	answer, err := gozenity.Question(fmt.Sprintf(`Add %s to config?`, pc.uri))
 
 	if !answer {
 		fmt.Println("Not adding url")
@@ -105,7 +105,7 @@ func (pc *pickyConfig) confirm() bool {
 }
 
 func (pc *pickyConfig) editURI() {
-	returnURL, err := dmenu.NewZenityInput().Input(fmt.Sprintf(`Edit %s?`, pc.uri), pc.uri)
+	returnURL, err := gozenity.Entry(fmt.Sprintf(`Edit %s?`, pc.uri), pc.uri)
 
 	if returnURL == "" {
 		fmt.Printf("Not editing %s\n", pc.uri)
