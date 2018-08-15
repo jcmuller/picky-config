@@ -10,7 +10,7 @@ import (
 
 	"github.com/jcmuller/gozenity"
 	"github.com/jcmuller/picky/rule"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -19,8 +19,7 @@ var (
 
 type defaultProfile struct {
 	Base    string `yaml:"base"`
-	Profile string `yaml:"profile"`
-	Args    string `yaml:"args"`
+	Args    []string `yaml:"args"`
 }
 
 type config struct {
@@ -130,9 +129,8 @@ func (pc *pickyConfig) getRule() {
 
 	pc.rule = &rule.Rule{
 		Label:   "New profile",
-		Base:    pc.config.DefaultProfile.Base,
-		Profile: pc.config.DefaultProfile.Profile,
-		Args:    "CHANGE ME",
+		Command: pc.config.DefaultProfile.Base,
+		Args:    []string{"CHANGE ME"},
 	}
 	pc.config.Rules = append(pc.config.Rules, pc.rule)
 }
@@ -164,8 +162,9 @@ func (pc *pickyConfig) saveFile() {
 }
 
 func (pc *pickyConfig) openURI() {
-	command := pc.rule.GetCommand(pc.inputUri)
-	err := exec.Command(command[0], command[1:]...).Run()
+	command, args := pc.rule.GetCommand()
+	args = append(args, pc.inputUri)
+	err := exec.Command(command, args...).Run()
 
 	if err != nil {
 		panic(err)
