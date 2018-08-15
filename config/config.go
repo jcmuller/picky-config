@@ -17,15 +17,16 @@ var (
 	configFilePath = fmt.Sprintf("%s/.config/picky/config.yaml", os.Getenv("HOME"))
 )
 
-type defaultProfile struct {
-	Base    string `yaml:"base"`
+type template struct {
+	Command string   `yaml:"command"`
 	Args    []string `yaml:"args"`
 }
 
 type config struct {
-	Debug          bool            `yaml:"debug"`
-	DefaultProfile *defaultProfile `yaml:"default"`
-	Rules          []*rule.Rule    `yaml:"rules"`
+	Debug    bool         `yaml:"debug"`
+	Default  *template    `yaml:"default"`
+	Template *template    `yaml:"template"`
+	Rules    []*rule.Rule `yaml:"rules"`
 }
 
 type pickyConfig struct {
@@ -128,9 +129,10 @@ func (pc *pickyConfig) getRule() {
 	}
 
 	pc.rule = &rule.Rule{
-		Label:   "New profile",
-		Command: pc.config.DefaultProfile.Base,
-		Args:    []string{"CHANGE ME"},
+		Label: "New profile",
+
+		Command: pc.config.Template.Command,
+		Args:    pc.config.Template.Args,
 	}
 	pc.config.Rules = append(pc.config.Rules, pc.rule)
 }
